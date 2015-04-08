@@ -1,0 +1,4 @@
+# -*- python -*-
+Import('env')
+
+env.Program('hello', env.Glob('test.cc'))

@@ -11,6 +11,10 @@ mode = ARGUMENTS.get('mode', 'debug')
 env['BUILD_DIR'] = env.Dir('build/%s' % mode)
 env['TMP_DIR_PATTERN'] = '$BUILD_DIR/%{user}s.tmp.%{ts}s.%{salt}s/'
 env['RANDOM'] = random.Random()
+env['HEADER_DIR'] = env.Dir('$BUILD_DIR/include')
+env['BIN_DIR'] = env.Dir('$BUILD_DIR/bin')
+env.SetOption('duplicate','hard-soft-copy')
+env.Decider('MD5')
 
 # helper functions
 
@@ -30,21 +34,40 @@ def subDir(env, subd):
 env.AddMethod(subDir)
 
 _Glob = env.Glob
-
 def Glob(pathname, ondisk=True, source=False, strings=False):
     fs = _Glob(pathname, ondisk, source, strings)
     fs.sort(key=lambda x:x.path)
     return fs
-
 env.Glob = Glob
+
+_Program = env.Program
+def Program(env, target=None, source=None, **kwargs):
+    p = _Program(target, source, **kwargs)
+    env.Install('$BIN_DIR', p)
+    return p
+env.AddMethod(Program)
+
+def Header(env, base, files):
+    for f in files:
+        src = env.File(f).abspath
+        d = env.Dir('$HEADER_DIR').Dir(base)
+        if not op.exists(d.abspath):
+            os.makedirs(d.abspath)
+        des = d.File(op.basename(src)).abspath
+        os.symlink(src, des)
+env.AddMethod(Header)
+
+env['BUILDERS']['Object'] = env['BUILDERS']['SharedObject']
+env['BUILDERS']['StaticObject'] = env['BUILDERS']['SharedObject']
 
 # prepare build dir
 
 def makeBuildDir():
-    buildDir = env['BUILD_DIR'].abspath
-    if not op.exists(buildDir):
-        os.makedirs(buildDir)
-    assert op.isdir(buildDir)
+    for d in [env['BUILD_DIR'], env['HEADER_DIR']]:
+        d = d.abspath
+        if not op.exists(d):
+            os.makedirs(d)
+        assert op.isdir(d)
 
 def cleanBuildDir():
     buildDir = env['BUILD_DIR'].abspath
@@ -55,7 +78,7 @@ def cleanBuildDir():
             pass
         for f in files:
             f = op.join(rt, f)
-            if op.islink(f):
+            if op.islink(f) or f.endswith('.gcno') or f.endswith('.gcda'):
                 os.remove(f)
 
 def firstDirname(p):
@@ -96,12 +119,12 @@ flags = {
     'CFLAGS': ['--std=c11'],
     'CXXFLAGS': ['--std=c++11'],
     'CCFLAGS': ['-Wall', '-Wfloat-equal',
-                '-fsanitize=address',
-                '-g', '-gdwarf-4', '-fvar-tracking-assignments'],
-    'LINKFLAGS': ['-fsanitize=address']}
+                '-g', '-gdwarf-4', 
+                '-I%s' % env['HEADER_DIR'].path],
+    'LINKFLAGS': []}
 if mode == 'debug':
-    flags['CCFLAGS'] += ['-O0', '--coverage']
-    flags['LINKFLAGS'] += ['--coverage']
+    flags['CCFLAGS'] += ['-O0', '--coverage', '-fsanitize=address', '-fvar-tracking-assignments']
+    flags['LINKFLAGS'] += ['--coverage', '-fsanitize=address']
 elif mode == 'release':
     flags['CCFLAGS'] += ['-O2', '-Werror', '-DNDEBUG']
 env.MergeFlags(flags)

@@ -21,7 +21,8 @@ lua_compilier = env.SharedObject(lua_compilier)
 lua_interpreter = env.SharedObject(lua_interpreter)
 
 env.Header('lua', lua_headers)
-lua_libs = env.StaticLibrary('lua', lua_libs)
-env.Program('luac', [lua_compilier, lua_libs], LIBS=['rt', 'm'])
-env.Program('lua', [lua_interpreter, lua_libs], LIBS=['dl', 'rt', 'm'])
+static = env.StaticLibrary('lua_static', lua_libs)
+shared = env.SharedLibrary('lua', lua_libs)
+env.Program('luac', [lua_compilier, static], LIBS=['rt', 'm'])
+env.Program('lua', [lua_interpreter, static], LIBS=['dl', 'rt', 'm'])
 

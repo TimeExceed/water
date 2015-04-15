@@ -121,7 +121,7 @@ flags = {
     'CCFLAGS': ['-Wall', '-Wfloat-equal',
                 '-g', '-gdwarf-4', 
                 '-I%s' % env['HEADER_DIR'].path],
-    'LINKFLAGS': []}
+    'LINKFLAGS': ['-Wl,-E']}
 if mode == 'debug':
     flags['CCFLAGS'] += ['-O0', '--coverage', '-fsanitize=address', '-fvar-tracking-assignments']
     flags['LINKFLAGS'] += ['--coverage', '-fsanitize=address']

@@ -10,9 +10,9 @@ ccflags.append('-DLUA_USE_LINUX')
 env.Replace(CCFLAGS = ccflags)
 
 lua_headers = ['lauxlib.h', 'lua.h', 'lua.hpp', 'luaconf.h', 'lualib.h']
-lua_interpreter = env.File('lua.c')
-lua_compilier = env.File('luac.c')
-lua_libs = env.Glob('*.c')
+lua_interpreter = env.File('lua.cpp')
+lua_compilier = env.File('luac.cpp')
+lua_libs = env.Glob('*.cpp')
 lua_libs.remove(lua_interpreter)
 lua_libs.remove(lua_compilier)
 

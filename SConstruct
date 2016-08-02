@@ -25,11 +25,14 @@
 
 import os
 import os.path as op
+import stat
 import shutil as sh
 import subprocess as sp
 import random
 from datetime import datetime
 import hashlib
+import zipfile
+import re
 
 env = Environment()
 mode = ARGUMENTS.get('mode', 'debug')
@@ -38,6 +41,7 @@ env['TMP_DIR_PATTERN'] = '$BUILD_DIR/tmp/%s.%s.%s/'
 env['RANDOM'] = random.Random()
 env['HEADER_DIR'] = env.Dir('$BUILD_DIR/include')
 env['BIN_DIR'] = env.Dir('$BUILD_DIR/bin')
+env['LIB_DIR'] = env.Dir('$BUILD_DIR/lib')
 env.SetOption('duplicate', 'soft-hard-copy')
 env.Decider('MD5')
 
@@ -182,15 +186,46 @@ def jar(env, target, source, **kwargs):
         sp.check_call(['jar', 'i', tmpJar])
         os.link(tmpJar, dstJar.path)
     env.Command(target, source, _jar)
+    target = env.File(target)
     for x in source:
         if x.isdir():
             for rt, _, files in os.walk(x.abspath):
                 for f in files:
-                    env.Depends(env.File(target), env.File(op.join(rt, f)))
+                    env.Depends(target, env.File(op.join(rt, f)))
         else:
-            env.Depends(env.File(target), x)
+            env.Depends(target, x)
+    return target
 
 env.AddMethod(jar)
+
+def zipper(target, source, env):
+    assert len(target) == 1
+    target = target[0]
+    with zipfile.ZipFile(target.abspath, 'w') as zf:
+        for x in source:
+            zf.write(x.abspath, op.basename(x.path))
+
+env.Append(BUILDERS={'zip': Builder(action=zipper, suffix='.zip')})
+
+def download(env, target, source):
+    target = env.File(target)
+    if not op.exists(target.abspath):
+        sp.check_call(['wget', '-c', '-O', target.abspath, source])
+    return target
+
+env.AddMethod(download)
+
+def extract(env, target, source):
+    tt = target
+    ss = source
+    def _extract(target, source, env):
+        with zipfile.ZipFile(ss.abspath, 'r') as zf:
+            zf.extractall(op.dirname(ss.abspath), tt)
+    _target = env.Command(target, source, _extract)
+    env.Depends(_target, source)
+    return _target
+
+env.AddMethod(extract)
 
 # for C/C++
 
@@ -259,6 +294,35 @@ def pdflatex(target, source, env):
             aux = newAux
 
 env.Append(BUILDERS={'PdfLatex': Builder(action=pdflatex, suffix='.pdf')})
+
+# for docker
+
+def dockerize(env, target, source, **kwargs):
+    registry = kwargs['REGISTRY']
+    def _dockerize(target, source, env):
+        assert len(source) == 1
+        source = source[0]
+        assert source.isdir()
+
+        assert len(target) == 1
+        target = target[0]
+        assert target.isfile() or not target.exists()
+
+        out = sp.check_output(['sudo', 'docker', 'build', '.'], cwd=source.abspath)
+        print out
+        match = re.search('Successfully built (\w+)', out)
+        assert match
+        image = match.group(1)
+        sp.check_call(['sudo', 'docker', 'tag', image, registry])
+        sp.check_call(['sudo', 'docker', 'push', registry])
+
+        with open(target.path, 'w') as fp:
+            fp.write(image)
+        
+    env.Command(target, source, _dockerize)
+    return target
+
+env.AddMethod(dockerize)
 
 # gogogo
 

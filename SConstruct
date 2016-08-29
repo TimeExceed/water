@@ -173,7 +173,7 @@ def jar(env, target, source, **kwargs):
         for x in srcs:
             assert x.exists()
 
-        workdir = env.newTmpDir('clj').path
+        workdir = env.newTmpDir('jar').path
         
         cloneInto(workdir, srcs)
         manifest = writeManifest(workdir, kwargs)
@@ -197,6 +197,44 @@ def jar(env, target, source, **kwargs):
     return target
 
 env.AddMethod(jar)
+
+def javac(env, target, source, **kwargs):
+    def _javac(target, source, env):
+        target = target[0]
+        source = source[0]
+        tdir = env.newTmpDir('javac')
+        srcs = []
+        for rt, _, files in os.walk(source.path):
+            for f in files:
+                if f.endswith('.java'):
+                    srcs.append(op.join(rt, f))
+        sp.check_call(['javac', '-sourcepath', source.path, '-d', tdir.path] + srcs)
+        for rt, _, files in os.walk(source.path):
+            for f in files:
+                if not f.endswith('.java'):
+                    from_ = op.join(rt, f)
+                    to = op.join(tdir.path, op.relpath(rt, source.path), f)
+                    symlink(from_, to)
+        manifest = writeManifest(tdir.path, kwargs)
+
+        tmpJar = op.join(tdir.path, op.basename(target.path))
+        if manifest:
+            sp.check_call(['jar', 'cfm', tmpJar, manifest, '-C', tdir.path, '.'])
+        else:
+            sp.check_call(['jar', 'cf', tmpJar, '-C', tdir.path, '.'])
+        sp.check_call(['jar', 'i', tmpJar])
+        os.link(tmpJar, target.path)
+        
+    target = env.File(target)
+    source = env.Dir(source)
+    env.Command(target, source, _javac)
+    target = env.File(target)
+    for rt, _, files in os.walk(source.abspath):
+        for f in files:
+            env.Depends(target, env.File(op.join(rt, f)))
+    
+
+env.AddMethod(javac)
 
 def zipper(target, source, env):
     assert len(target) == 1

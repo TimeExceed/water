@@ -155,9 +155,9 @@ def cloneInto(dstDir, srcs):
             symlink(x.path, op.join(dstDir, op.basename(x.path)))
 
 def writeManifest(workdir, kws):
-    if 'Manifest' not in kws:
+    if 'MANIFEST' not in kws:
         return None
-    items = kws['Manifest']
+    items = kws['MANIFEST']
     fn = op.join(workdir, 'manifest')
     with open(fn, 'w') as f:
         for k, v in items.items():
@@ -198,36 +198,48 @@ def jar(env, target, source, **kwargs):
 
 env.AddMethod(jar)
 
-def javac(env, target, source, **kwargs):
-    def _javac(target, source, env):
-        target = target[0]
-        source = source[0]
-        tdir = env.newTmpDir('javac')
-        srcs = []
-        for rt, _, files in os.walk(source.path):
-            for f in files:
-                if f.endswith('.java'):
-                    srcs.append(op.join(rt, f))
+def _javac(target, source, env):
+    target = target[0]
+    source = source[0]
+    tdir = env.newTmpDir('javac')
+    srcs = []
+    for rt, _, files in os.walk(source.path):
+        for f in files:
+            if f.endswith('.java'):
+                srcs.append(op.join(rt, f))
+    if '_JAVAC_CLASSPATH' in env:
+        sp.check_call(['javac', '-sourcepath', source.path, '-d', tdir.path, '-cp', env['_JAVAC_CLASSPATH']] + srcs)
+    else:
         sp.check_call(['javac', '-sourcepath', source.path, '-d', tdir.path] + srcs)
-        for rt, _, files in os.walk(source.path):
-            for f in files:
-                if not f.endswith('.java'):
-                    from_ = op.join(rt, f)
-                    to = op.join(tdir.path, op.relpath(rt, source.path), f)
-                    symlink(from_, to)
-        manifest = writeManifest(tdir.path, kwargs)
+    for rt, _, files in os.walk(source.path):
+        for f in files:
+            if not f.endswith('.java'):
+                from_ = op.join(rt, f)
+                to = op.join(tdir.path, op.relpath(rt, source.path), f)
+                symlink(from_, to)
+    manifest = writeManifest(tdir.path, env)
 
-        tmpJar = op.join(tdir.path, op.basename(target.path))
-        if manifest:
-            sp.check_call(['jar', 'cfm', tmpJar, manifest, '-C', tdir.path, '.'])
-        else:
-            sp.check_call(['jar', 'cf', tmpJar, '-C', tdir.path, '.'])
-        sp.check_call(['jar', 'i', tmpJar])
-        os.link(tmpJar, target.path)
-        
+    tmpJar = op.join(tdir.path, op.basename(target.path))
+    if manifest:
+        sp.check_call(['jar', 'cfm', tmpJar, manifest, '-C', tdir.path, '.'])
+    else:
+        sp.check_call(['jar', 'cf', tmpJar, '-C', tdir.path, '.'])
+    sp.check_call(['jar', 'i', tmpJar])
+    os.link(tmpJar, target.path)
+
+def javac(env, target, source, **kwargs):
+    tenv = env
+    if 'LIBS' in kwargs:
+        cp = ':'.join(x.path for x in env.Flatten(kwargs['LIBS']))
+        tenv = env.Clone()
+        tenv['_JAVAC_CLASSPATH'] = cp
+    if 'MANIFEST' in kwargs:
+        if tenv == env:
+            tenv = env.Clone()
+        tenv['MANIFEST'] = kwargs['MANIFEST']
     target = env.File(target)
     source = env.Dir(source)
-    env.Command(target, source, _javac)
+    tenv.Command(target, source, _javac)
     target = env.File(target)
     for rt, _, files in os.walk(source.abspath):
         for f in files:

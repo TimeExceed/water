@@ -33,6 +33,7 @@ from datetime import datetime
 import hashlib
 import zipfile
 import re
+import collections
 
 env = Environment()
 mode = ARGUMENTS.get('mode', 'debug')
@@ -293,21 +294,82 @@ elif mode == 'release':
     flags['CCFLAGS'] += ['-O2', '-Werror', '-DNDEBUG']
 env.MergeFlags(flags)
 
+_extLibs = set([])
+_libDeps = {}
+
+def libDeps(env, lib, deps):
+    if lib in _libDeps:
+        _libDeps[lib] |= set(deps)
+    else:
+        _libDeps[lib] = set(deps)
+env.AddMethod(libDeps)
+
+def countDepends(init, deps):
+    q = collections.deque(init)
+    depCnts = dict((x, 0) for x in init)
+    while len(q) > 0:
+        x = q.popleft()
+        if x in deps:
+            for y in deps[x]:
+                if y in depCnts:
+                    depCnts[y] += 1
+                else:
+                    depCnts[y] = 1
+                    q.append(y)
+    return depCnts
+
+def popNoDeps(depCnts, deps):
+    while len(depCnts) > 0:
+        for key, cnt in depCnts.items():
+            if cnt == 0:
+                break
+        del depCnts[key]
+        for x in deps.get(key, []):
+            depCnts[x] -= 1
+        yield key
+
+def topologicalSort(init, deps):
+    depCnts = countDepends(init, deps)
+    return [x for x in popNoDeps(depCnts, deps)]
+
+
 _Program = env.Program
 def Program(env, target=None, source=None, **kwargs):
+    if 'LIBS' in kwargs:
+        global _libDeps
+        libs = topologicalSort(set(kwargs['LIBS']), _libDeps)
+        kwargs['LIBS'] = libs
     p = _Program(target, source, **kwargs)
+    if 'LIBS' in kwargs:
+        for x in kwargs['LIBS']:
+            if x not in _extLibs:
+                env.Depends(p, env.File('$LIB_DIR/lib%s.a' % x))
     env.Install('$BIN_DIR', p)
     return p
 env.AddMethod(Program)
 
-def Header(env, base, files):
-    for f in files:
-        src = env.File(f).abspath
-        d = env.Dir('$HEADER_DIR').Dir(base)
-        if not op.exists(d.abspath):
-            os.makedirs(d.abspath)
-        des = d.File(op.basename(src)).abspath
-        os.symlink(src, des)
+def Header(env, base, src):
+    base = env.Dir('$HEADER_DIR').Dir(base)
+    if not op.exists(base.abspath):
+        os.makedirs(base.abspath)
+    src = Flatten(src)
+    for src in src:
+        if src.isfile():
+            src = src.abspath
+            des = base.File(op.basename(src)).abspath
+            os.symlink(src, des)
+        else:
+            src = src.abspath
+            base = base.abspath
+            for rt, dirs, files in os.walk(src):
+                for d in dirs:
+                    d = op.join(base, op.relpath(op.join(rt, d), src))
+                    if not op.exists(d):
+                        os.mkdir(d)
+                for f in files:
+                    s = op.join(rt, f)
+                    d = op.join(base, op.relpath(s, src))
+                    os.symlink(s, d)
 env.AddMethod(Header)
 
 env['BUILDERS']['Object'] = env['BUILDERS']['SharedObject']

@@ -407,6 +407,21 @@ def pdflatex(target, source, env):
 
 env.Append(BUILDERS={'PdfLatex': Builder(action=pdflatex, suffix='.pdf')})
 
+def luamp(env, source):
+    def build(target, source, env):
+        base, source = op.split(source[0].path)
+        source, _ = op.splitext(source)
+        with open(op.join(base, source + '.mp'), 'w') as fp:
+            sp.check_call(['/usr/bin/lua5.2', source + '.lua'], stdout=fp, cwd=base)
+        sp.check_call(['/usr/bin/mptopdf', '--latex', source + '.mp'], cwd=base)
+        os.rename(op.join(base, source + '-0.pdf'), op.join(base, source + '.pdf'))
+
+    source = op.basename(env.File(source).path)
+    root, _ = op.splitext(op.basename(source))
+    env.Command(root + '.pdf', source, build)
+
+env.AddMethod(luamp)
+
 # for docker
 
 def dockerize(env, target, source, **kwargs):

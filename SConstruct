@@ -451,6 +451,86 @@ def dockerize(env, target, source, **kwargs):
 
 env.AddMethod(dockerize)
 
+# for erlang
+
+env['ERLANG_HEADER'] = env.Dir('$BUILD_DIR/hrl')
+
+def _erlc(target, source, env):
+    assert len(source) == 1, source
+    assert len(target) == 1, target
+    src = source[0]
+    tgt = target[0]
+    assert op.split(src.abspath)[0] == op.split(tgt.abspath)[0], 'source: %s, target: %s' % (src.abspath, tgt.abspath)
+    sp.check_call(['/usr/bin/erlc',
+                   '-I', env['ERLANG_HEADER'].abspath,
+                   '-smp',
+                   src.abspath],
+                  cwd=op.dirname(src.abspath))
+
+env.Append(BUILDERS={'_erlc': Builder(action=_erlc, suffix='.beam')})
+
+def erlc(env, source):
+    beams = [env._erlc(x) for x in env.Flatten(source)]
+    return beams
+
+env.AddMethod(erlc)
+
+def _dialyzer(target, source, env):
+    assert len(source) == 1
+    assert len(target) == 1
+    src = source[0]
+    tgt = target[0]
+    with open(tgt.abspath, 'w') as fp:
+        sp.check_call(['/usr/bin/dialyzer',
+                       '-I', env['ERLANG_HEADER'].abspath,
+                       src.abspath],
+                      stderr=sp.STDOUT,
+                      stdout=fp)
+
+env.Append(BUILDERS={'_dialyzer': Builder(action=_dialyzer, suffix='.dialyzer')})
+
+def dialyzer(env, source):
+    dials = [env._dialyzer(x) for x in env.Flatten(source)]
+    env.Alias('DIALYZER', dials)
+    return dials
+    
+env.AddMethod(dialyzer)
+
+# for packaging
+
+env['PKG_DIR'] = env.Dir('$BUILD_DIR/pkg/')
+
+def _tarball(target, source, env):
+    import tarfile
+    target = target[0]
+    xs = env['__ext']
+    with tarfile.open(env.File(target).abspath, 'w:gz') as fp:
+        for x, y in xs:
+            fp.add(y, x)
+
+env.Append(BUILDERS={'_tarball': Builder(action=_tarball, suffix='.tar.gz')})
+
+def tarball(env, target, source):
+    xs = []
+    for p, f in source:
+        fs = env.Flatten(f)
+        for f in fs:
+            f = env.File(f).abspath
+            path_in_ball = op.join(p, op.basename(f))
+            path_in_real = f
+            while op.islink(path_in_real):
+                path_in_real = op.join(
+                    op.dirname(path_in_real), os.readlink(path_in_real))
+            xs.append((path_in_ball, path_in_real))
+    ball = env._tarball(target=[target],
+                        source=[env.File(x) for _,x in xs],
+                        __ext = xs)
+    res = env.Install('$PKG_DIR', ball)
+    env.Alias('PACK', res)
+    return res
+
+env.AddMethod(tarball)
+
 # gogogo
 
 env.SConscript('$BUILD_DIR/SConscript', exports='env')

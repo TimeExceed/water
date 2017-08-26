@@ -483,6 +483,7 @@ def _dialyzer(target, source, env):
     with open(tgt.abspath, 'w') as fp:
         sp.check_call(['/usr/bin/dialyzer',
                        '-I', env['ERLANG_HEADER'].abspath,
+                       '-DDIALYZER',
                        src.abspath],
                       stderr=sp.STDOUT,
                       stdout=fp)

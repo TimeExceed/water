@@ -48,6 +48,15 @@ env.Decider('MD5')
 
 # helper functions
 
+def detectLua():
+    if op.exists('/usr/bin/lua5.3'):
+        return '/usr/bin/lua5.3'
+    elif op.exists('/usr/bin/lua5.2'):
+        return '/usr/bin/lua5.2'
+    else:
+        return None
+
+
 def newTmpDir(env, usr):
     ts = datetime.utcnow()
     ts = ts.strftime('%Y%m%dT%H%M%S.%f')
@@ -390,35 +399,42 @@ def calcAuxDigest(tex, pdfDir):
     else:
         return ''
 
-def runPdfLatex(tex, pdfDir):
-    sp.check_call(['pdflatex', tex], cwd=pdfDir)
+def runLuaLatex(tex, pdfDir):
+    sp.check_call(['lualatex', '-shell-escape', tex], cwd=pdfDir)
     return calcAuxDigest(tex, pdfDir)
 
-def pdflatex(target, source, env):
+def latex(target, source, env):
     assert len(target) == len(source)
     for pdf, tex in zip(map(pathInFs, target), map(pathInFs, source)):
         pdfDir = op.dirname(pdf)
         aux = calcAuxDigest(tex, pdfDir)
         while True:
-            newAux = runPdfLatex(tex, pdfDir)
+            newAux = runLuaLatex(tex, pdfDir)
             if aux == newAux:
                 break
             aux = newAux
 
-env.Append(BUILDERS={'PdfLatex': Builder(action=pdflatex, suffix='.pdf')})
+env.Append(BUILDERS={'Latex': Builder(action=latex, suffix='.pdf')})
 
 def luamp(env, source):
+    if 'LUA' not in env:
+        LUA = detectLua()
+        if LUA:
+            env['LUA'] = LUA
+        else:
+            raise Exception("undetect lua interpreter")
+
     def build(target, source, env):
         base, source = op.split(source[0].path)
         source, _ = op.splitext(source)
         with open(op.join(base, source + '.mp'), 'w') as fp:
-            sp.check_call(['/usr/bin/lua5.2', source + '.lua'], stdout=fp, cwd=base)
+            sp.check_call([env['LUA'], source + '.lua'], stdout=fp, cwd=base)
         sp.check_call(['/usr/bin/mptopdf', '--latex', source + '.mp'], cwd=base)
         os.rename(op.join(base, source + '-0.pdf'), op.join(base, source + '.pdf'))
 
     source = op.basename(env.File(source).path)
     root, _ = op.splitext(op.basename(source))
-    env.Command(root + '.pdf', source, build)
+    return env.Command(root + '.pdf', source, build)
 
 env.AddMethod(luamp)
 

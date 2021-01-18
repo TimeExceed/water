@@ -1,4 +1,4 @@
-FROM alpine:3.12
+FROM alpine:3.13
 COPY repositories /etc/apk/
 COPY my_ps1.sh /etc/profile.d/
 ENV PS1='\n\e[1;37m[\e[m\e[1;32m\h\e[m\e[1;33m@\e[m\e[1;35m`date -Iseconds`\e[m \e[4m`pwd`\e[m\e[1;37m]\e[m\e[1;36m\e[m\n\$'
@@ -25,3 +25,6 @@ RUN apk add \
 RUN apk add \
     py3-sphinx py3-sphinx_rtd_theme py3-sphinxcontrib-jsmath
 
+# java
+RUN apk add \
+    openjdk11-jdk

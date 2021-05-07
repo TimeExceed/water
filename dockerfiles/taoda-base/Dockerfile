@@ -25,6 +25,3 @@ RUN apk add \
 RUN apk add \
     py3-sphinx py3-sphinx_rtd_theme py3-sphinxcontrib-jsmath
 
-# java
-RUN apk add \
-    openjdk11-jdk

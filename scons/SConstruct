@@ -399,7 +399,7 @@ def calcAuxDigest(tex, pdfDir):
     aux = os.path.join(pdfDir, os.path.splitext(os.path.basename(tex))[0] + '.aux')
     if os.path.exists(aux):
         digest = hashlib.md5()
-        with open(aux) as f:
+        with open(aux, 'rb') as f:
             digest.update(f.read())
         return digest.digest()
     else:

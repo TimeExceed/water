@@ -16,14 +16,12 @@ RUN apt-get install -y \
 
 RUN /opt/repeat.py apt-get install -y \
     # base tools \
-    python3 python3-dev python3-pip ipython3 python3-pygments \
+    python3 python3-dev python3-pip python3-pygments \
     git git-lfs file binutils curl wget tmux locales-all less \
     # build tools \
     cmake ninja-build make scons \
     # C/C++ \
     gcc g++ clang \
-    # documentation tool
-    python3-sphinx python3-sphinx-rtd-theme jsmath \
     && apt-get clean
 
 # tex/latex \
@@ -35,3 +33,7 @@ RUN /opt/repeat.py apt-get install -y \
     texlive-luatex \
     texlive-xetex \
     && apt-get clean
+
+# documentation tool
+COPY requirements.txt /opt/
+RUN /opt/repeat.py pip install --requirement /opt/requirements.txt

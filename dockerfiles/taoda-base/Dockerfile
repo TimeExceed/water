@@ -16,7 +16,7 @@ RUN apt-get install -y \
 
 RUN /opt/repeat.py apt-get install -y \
     # base tools \
-    python3 python3-dev python3-pip python3-pygments \
+    python3 python3-dev python3-pip \ 
     git git-lfs file binutils curl wget tmux locales-all less \
     # build tools \
     cmake ninja-build make scons \

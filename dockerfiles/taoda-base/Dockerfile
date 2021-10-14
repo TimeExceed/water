@@ -1,20 +1,20 @@
 FROM ubuntu:20.04
 COPY my_ps1.sh /etc/profile.d/
 ENV PS1='\n\e[1;37m[\e[m\e[1;32m\h\e[m\e[1;33m@\e[m\e[1;35m`date -Iseconds`\e[m \e[4m`pwd`\e[m\e[1;37m]\e[m\e[1;36m\e[m\n\$'
-COPY repeat.py /opt/
+COPY repeat.sh /usr/local/bin/
 WORKDIR /opt/code/
 
-RUN apt-get update
+RUN /usr/local/bin/repeat.sh apt-get update
 
-RUN DEBIAN_FRONTEND="noninteractive" apt-get install -y \
+RUN DEBIAN_FRONTEND="noninteractive" /usr/local/bin/repeat.sh apt-get install -y \
     tzdata \
     && apt-get clean
 
-RUN apt-get install -y \
+RUN /usr/local/bin/repeat.sh apt-get install -y \
     python3 apt-utils \
     && apt-get clean
 
-RUN /opt/repeat.py apt-get install -y \
+RUN /usr/local/bin/repeat.sh  apt-get install -y \
     # base tools \
     python3 python3-dev python3-pip \ 
     git git-lfs file binutils curl wget tmux locales-all less \
@@ -25,7 +25,7 @@ RUN /opt/repeat.py apt-get install -y \
     && apt-get clean
 
 # tex/latex \
-RUN /opt/repeat.py apt-get install -y \
+RUN /usr/local/bin/repeat.sh  apt-get install -y \
     texlive \
     texlive-lang-chinese \
     texlive-pictures \
@@ -36,4 +36,4 @@ RUN /opt/repeat.py apt-get install -y \
 
 # documentation tool
 COPY requirements.txt /opt/
-RUN /opt/repeat.py pip install --requirement /opt/requirements.txt
+RUN /usr/local/bin/repeat.sh  pip install --requirement /opt/requirements.txt

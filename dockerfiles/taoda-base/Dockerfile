@@ -19,7 +19,7 @@ RUN /usr/local/bin/repeat.sh  apt-get install -y \
     python3 python3-dev python3-pip \ 
     git git-lfs file binutils curl wget tmux locales-all less \
     # build tools \
-    cmake ninja-build make scons \
+    cmake ninja-build make scons generate-ninja \
     # C/C++ \
     gcc g++ clang \
     && apt-get clean

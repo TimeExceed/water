@@ -1,0 +1,6 @@
+deb http://mirrors.aliyun.com/ubuntu/ impish main restricted
+deb http://mirrors.aliyun.com/ubuntu/ impish-updates main restricted
+deb http://mirrors.aliyun.com/ubuntu/ impish universe
+deb http://mirrors.aliyun.com/ubuntu/ impish-updates universe
+deb http://mirrors.aliyun.com/ubuntu/ impish multiverse
+deb http://mirrors.aliyun.com/ubuntu/ impish-updates multiverse

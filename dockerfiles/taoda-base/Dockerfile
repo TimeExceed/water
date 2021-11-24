@@ -1,39 +1,49 @@
 FROM ubuntu:21.10
-COPY my_ps1.sh /etc/profile.d/
-ENV PS1='\n\e[1;37m[\e[m\e[1;32m\h\e[m\e[1;33m@\e[m\e[1;35m`date -Iseconds`\e[m \e[4m`pwd`\e[m\e[1;37m]\e[m\e[1;36m\e[m\n\$'
 COPY repeat.sh /usr/local/bin/
+COPY sources.list /etc/apt/
 WORKDIR /opt/code/
 
-RUN /usr/local/bin/repeat.sh apt-get update
+RUN repeat.sh  apt-get update
 
-RUN DEBIAN_FRONTEND="noninteractive" /usr/local/bin/repeat.sh apt-get install -y \
-    tzdata \
+RUN DEBIAN_FRONTEND="noninteractive" repeat.sh apt-get install -y tzdata \
     && apt-get clean
 
-RUN /usr/local/bin/repeat.sh apt-get install -y \
-    python3 apt-utils \
+# base tools
+RUN repeat.sh  apt-get install -y \
+    python3 python3-pip python3-termcolor \ 
+    git git-lfs file binutils curl wget tmux less sudo \
     && apt-get clean
 
-RUN /usr/local/bin/repeat.sh  apt-get install -y \
-    # base tools \
-    python3 python3-dev python3-pip \ 
-    git git-lfs file binutils curl wget tmux locales-all less \
-    # build tools \
-    cmake ninja-build make scons generate-ninja \
-    # C/C++ \
-    gcc g++ clang \
+# build tools
+RUN repeat.sh  apt-get install -y \
+    cmake ninja-build make scons generate-ninja build-essential pkg-config \
+    && apt-get clean
+
+# C/C++
+RUN repeat.sh  apt-get install -y \
+    gcc g++ clang libboost-all-dev python3-dev \
     && apt-get clean
 
 # tex/latex \
-RUN /usr/local/bin/repeat.sh  apt-get install -y \
-    texlive \
-    texlive-lang-chinese \
-    texlive-pictures \
-    texlive-latex-extra \
-    texlive-luatex \
-    texlive-xetex \
+RUN repeat.sh  apt-get install -y \
+    texlive texlive-lang-chinese texlive-pictures texlive-latex-extra \
+    texlive-luatex texlive-science \
     && apt-get clean
 
 # documentation tool
-COPY requirements.txt /opt/
-RUN /usr/local/bin/repeat.sh  pip install --requirement /opt/requirements.txt
+# COPY requirements.txt /opt/
+# RUN /usr/local/bin/repeat.sh  pip install --requirement /opt/requirements.txt
+RUN repeat.sh  apt-get install -y \
+    python3-sphinx sphinx-intl \
+    python3-recommonmark python3-sphinx-markdown-tables jsmath \
+    python3-sphinx-rtd-theme \
+    && apt-get clean
+
+# user
+ENV COLORTERM="truecolor" TERM="xterm-256color"
+RUN groupadd --gid 1000 dockeruser \
+    && useradd --uid 1000 --gid 1000 --shell /bin/bash --password 12345 --create-home --system dockeruser \
+    && usermod --append --groups sudo dockeruser
+COPY --chown=1000:1000 bashrc /home/dockeruser/.bash_profile
+COPY --chown=1000:1000 bashrc /home/dockeruser/.bashrc
+COPY sudoers /etc/

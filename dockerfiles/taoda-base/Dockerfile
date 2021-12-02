@@ -42,7 +42,7 @@ RUN repeat.sh  apt-get install -y \
 # user
 ENV COLORTERM="truecolor" TERM="xterm-256color"
 RUN groupadd --gid 1000 dockeruser \
-    && useradd --uid 1000 --gid 1000 --shell /bin/bash --password 12345 --create-home --system dockeruser \
+    && useradd --uid 1000 --gid 1000 --shell /bin/bash --create-home --system dockeruser \
     && usermod --append --groups sudo dockeruser
 COPY --chown=1000:1000 bashrc /home/dockeruser/.bash_profile
 COPY --chown=1000:1000 bashrc /home/dockeruser/.bashrc

@@ -26,8 +26,7 @@ RUN repeat.sh  apt-get install -y \
 
 # tex/latex \
 RUN repeat.sh  apt-get install -y \
-    texlive texlive-lang-chinese texlive-pictures texlive-latex-extra \
-    texlive-luatex texlive-science \
+    texlive-full \
     && apt-get clean
 
 # documentation tool

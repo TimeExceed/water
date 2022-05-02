@@ -1,4 +1,4 @@
-FROM ubuntu:21.10
+FROM ubuntu:22.04
 COPY repeat.sh /usr/local/bin/
 COPY sources.list /etc/apt/
 WORKDIR /opt/code/
@@ -10,7 +10,7 @@ RUN DEBIAN_FRONTEND="noninteractive" repeat.sh apt-get install -y tzdata \
 
 # base tools
 RUN repeat.sh  apt-get install -y \
-    python3 python3-pip python3-termcolor \ 
+    python3 python3-pip python3-termcolor python-is-python3 \
     git git-lfs file binutils curl wget tmux less sudo \
     && apt-get clean
 

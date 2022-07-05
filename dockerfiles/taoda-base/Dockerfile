@@ -27,11 +27,10 @@ RUN repeat.sh  apt-get install -y \
 # tex/latex \
 RUN repeat.sh  apt-get install -y \
     texlive-full \
-    && apt-get clean
+    && apt-get clean \
+    && su --command="luaotfload-tool --update" dockeruser
 
 # documentation tool
-# COPY requirements.txt /opt/
-# RUN /usr/local/bin/repeat.sh  pip install --requirement /opt/requirements.txt
 RUN repeat.sh  apt-get install -y \
     python3-sphinx sphinx-intl \
     python3-recommonmark python3-sphinx-markdown-tables jsmath \

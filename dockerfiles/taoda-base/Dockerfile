@@ -14,6 +14,15 @@ RUN repeat.sh  apt-get install -y \
     git git-lfs file binutils curl wget tmux less sudo \
     && apt-get clean
 
+# user
+ENV COLORTERM="truecolor" TERM="xterm-256color"
+RUN groupadd --gid 1000 dockeruser \
+    && useradd --uid 1000 --gid 1000 --shell /bin/bash --create-home --system dockeruser \
+    && usermod --append --groups sudo dockeruser
+COPY --chown=1000:1000 bashrc /home/dockeruser/.bash_profile
+COPY --chown=1000:1000 bashrc /home/dockeruser/.bashrc
+COPY sudoers /etc/
+
 # build tools
 RUN repeat.sh  apt-get install -y \
     cmake ninja-build make scons generate-ninja build-essential pkg-config \
@@ -37,11 +46,3 @@ RUN repeat.sh  apt-get install -y \
     python3-sphinx-rtd-theme \
     && apt-get clean
 
-# user
-ENV COLORTERM="truecolor" TERM="xterm-256color"
-RUN groupadd --gid 1000 dockeruser \
-    && useradd --uid 1000 --gid 1000 --shell /bin/bash --create-home --system dockeruser \
-    && usermod --append --groups sudo dockeruser
-COPY --chown=1000:1000 bashrc /home/dockeruser/.bash_profile
-COPY --chown=1000:1000 bashrc /home/dockeruser/.bashrc
-COPY sudoers /etc/

@@ -11,7 +11,7 @@ RUN DEBIAN_FRONTEND="noninteractive" repeat.sh apt-get install -y tzdata \
 # base tools
 RUN repeat.sh  apt-get install -y \
     python3 python3-pip python3-termcolor python-is-python3 \
-    git git-lfs file binutils curl wget tmux less sudo \
+    git git-lfs file binutils curl wget tmux bat sudo \
     && apt-get clean
 
 # user
@@ -28,11 +28,6 @@ RUN repeat.sh  apt-get install -y \
     cmake ninja-build make scons generate-ninja build-essential pkg-config \
     && apt-get clean
 
-# C/C++
-RUN repeat.sh  apt-get install -y \
-    gcc g++ clang libboost-all-dev python3-dev \
-    && apt-get clean
-
 # tex/latex \
 RUN repeat.sh  apt-get install -y \
     texlive-full \
@@ -45,4 +40,9 @@ RUN repeat.sh  apt-get install -y \
     python3-recommonmark python3-sphinx-markdown-tables jsmath \
     python3-sphinx-rtd-theme \
     && apt-get clean
+
+# C/C++
+# RUN repeat.sh  apt-get install -y \
+#     gcc g++ clang libboost-all-dev python3-dev \
+#     && apt-get clean
 

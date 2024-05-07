@@ -1,3 +1,3 @@
 #!/bin/sh
 
-docker build -t taoda-base .
+podman build -t taoda-base .

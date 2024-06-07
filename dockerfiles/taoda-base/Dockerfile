@@ -11,19 +11,13 @@ RUN DEBIAN_FRONTEND="noninteractive" repeat.sh apt-get install -y tzdata \
 # base tools
 RUN repeat.sh  apt-get install -y \
     python3 python3-pip python3-termcolor python-is-python3 \
-    git git-lfs file binutils curl wget tmux bat sudo fish \
+    git git-lfs file binutils curl wget tmux bat sudo fish eza fd-find ripgrep \
     && apt-get clean
 
 # user
 ENV COLORTERM="truecolor" TERM="xterm-256color"
-## for docker only
-# RUN groupadd --gid 1000 ubuntu \
-#     && useradd --uid 1000 --gid 1000 --shell /usr/bin/fish --create-home --system ubuntu \
-#     && usermod --append --groups sudo ubuntu
-## for podman only
 RUN usermod --append --groups sudo ubuntu \
     && usermod --shell /usr/bin/fish ubuntu
-##
 COPY --chown=1000:1000 config.fish /home/ubuntu/.config/fish/
 COPY sudoers /etc/
 
